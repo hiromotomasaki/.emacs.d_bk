@@ -1,0 +1,170 @@
+;; init.el
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Created by Masaki Hiromoto
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; emacsのバージョン : 24.5.1
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; インストール方法
+;; cd ~/local
+;; wget -O- http://ftp.gnu.org/gnu/emacs/emacs-24.5.tar.xz | tar xJf - 
+;; ./configure --prefix=$HOME/local
+;; sudo apt install libgtk2.0-dev libtiff5-dev libgif-dev libjpeg-dev libpng12-dev libxpm-dev libncurses-dev
+;; ./configure --prefix=$HOME/local
+;; make -j4
+;; make install -j4
+;; 
+;; ~/.bashrc内に
+;; export PATH=$PATH:~/local/emacs/bin
+;;
+;; あとはemacsでGUI実行可能emacs -nwでコンソール上で起動
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; 参考 : http://d.hatena.ne.jp/m-hiyama-memo/20150514/1431592229
+;; パッケージ管理 : el-get (これ以外にもpackage.elやcaskなどがあるがel-getを使う)
+;; キーバインド : bind-key
+;; パッケージ設定 : use-package
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; 参考 : http://qiita.com/kai2nenobu/items/5dfae3767514584f5220
+;; use-packageの使い方
+;; 参考 : http://kumaroot.readthedocs.io/ja/latest/emacs-usage.html
+;; use-packageを使った各種パッケージの設定法
+;; グラフをROOTを使って各方法が書いてあり、興味深かった。でもRを使う。
+;; use-packageを用いた設定法
+;; http://proglab.blog.fc2.com/blog-entry-10.html
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; 参考 : http://imkitchen.hatenablog.com/entry/2015/06/06/230000
+;; テーマ色
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; 参考 : http://imkitchen.hatenablog.com/entry/2015/06/06/230000
+;; C/C++のIDE
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; 参考 : http://futurismo.biz/archives/2840
+;; RのIDE
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; その他
+;; C++のコンパイラはg++を使っているが将来的にclangを使ってみたい
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; git clone https://github.com/dimitri/el-get.git
+;; と打って~/.emacs.dにel-getフォルダを生成
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ターミナル以外でEmacsを立ち上げてもpathが通るようにする
+(defun set-exec-path-from-shell-PATH ()
+    "Set up Emacs' `exec-path' and PATH environment variable to match that used by the user's shell.
+
+This is particularly useful under Mac OSX, where GUI apps are not started from a shell."
+    (interactive)
+    (let ((path-from-shell (replace-regexp-in-string "[ \t\n]*$" "" (shell-command-to-string "$SHELL --login -i -c 'echo $PATH'"))))
+      (setenv "PATH" path-from-shell)
+      (setq exec-path (split-string path-from-shell path-separator))))
+(set-exec-path-from-shell-PATH)
+
+
+(when load-file-name
+  (setq user-emacs-directory (file-name-directory load-file-name)))
+
+;; el-get https://github.com/dimitri/el-get
+(add-to-list 'load-path (locate-user-emacs-file "el-get"))
+(require 'el-get)
+;; el-getでダウンロードしたパッケージは ~/.emacs.d/ に入るようにする
+(setq el-get-dir (locate-user-emacs-file "elisp"))
+
+;; インストール可能なパッケージは
+;; M-x el-get-list-packages
+;; で確認可能
+
+;; パッケージがなければリストの追加をすればよい
+
+;; use-package を使えるようにする。
+(el-get-bundle use-package)
+(eval-when-compile (require 'use-package))
+(require 'bind-key)    ;; if you use any :bind variant (キーバインドの設定が簡潔に書ける)
+
+(setq use-package-verbose t)		       ;; use-package-verbose t にすると、Messageバッファにロード時のログが残る
+(setq use-package-minimum-reported-time 0.001) ;; "Minimal load time that will be reported. Note that `use-package-verbose' has to be set to t, for anything to be reported at all. If you customize this, then you should require the `use-package' feature in files that use `use-package', even if these files only contain compiled expansions of the macros.  If you don't do so, then the expanded macros do their job silently." 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; packageのインストール先の設定
+;; auto-install
+(el-get-bundle auto-install)
+(use-package auto-install
+  :config
+  (auto-install-update-emacswiki-package-name t)
+  (auto-install-compatibility-setup)
+)
+;; package.el
+(el-get-bundle package)
+(use-package package
+  :config
+  ;; Add package-archives
+  (add-to-list 'package-archives '("melpa" . "http://melpa.milkbox.net/packages/") t)
+  (add-to-list 'package-archives '("tromey" . "http://tromey.com/elpa/") t)
+  (add-to-list 'package-archives '("marmalade" . "http://marmalade-repo.org/packages/"))
+
+  ;; Initialize
+  (package-initialize)
+)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; load-pathを追加する関数を定義
+(defun add-to-load-path (&rest paths)
+  (let (path)
+    (dolist (path paths paths)
+     (let ((default-directory (expand-file-name (concat user-emacs-directory path))))
+        (add-to-list 'load-path default-directory)
+         (if (fboundp 'normal-top-level-add-subdirs-to-load-path)
+             (normal-top-level-add-subdirs-to-load-path))))))
+
+;;; ディレクトリをサブディレクトリごとload-pathに追加
+(add-to-load-path "elisp")
+
+
+;; init-loader
+(el-get-bundle init-loader)
+(add-to-load-path "inits")
+(use-package init-loader
+  :config
+  ;; ログファイルを表示する
+  ;; (set init-loader-show-log-after-init t)
+  ;; ログファイルを表示しない
+  ;; (set init-loader-show-log-after-init 'error-only)
+  ;; バイトコンパイルをする
+  (setq init-loader-byte-compile t)
+    ;; バイトコンパイルをしない
+  ;;(setq init-loader-byte-compile nil)
+  ;; **-hoge.elを入れるディレクトリの設定
+  (init-loader-load "~/.emacs.d/inits"))
+
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(global-linum-mode t)
+ '(safe-local-variable-values
+   (quote
+    ((eval ignore-errors "Write-contents-functions is a buffer-local alternative to before-save-hook"
+	   (add-hook
+	    (quote write-contents-functions)
+	    (lambda nil
+	      (delete-trailing-whitespace)
+	      nil))
+	   (require
+	    (quote whitespace))
+	   "Sometimes the mode needs to be toggled off and on."
+	   (whitespace-mode 0)
+	   (whitespace-mode 1))
+     (whitespace-line-column . 80)
+     (whitespace-style face tabs trailing lines-tail)))))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(linum-highlight-face ((t (:foreground "black" :background "red")))))
+
+
